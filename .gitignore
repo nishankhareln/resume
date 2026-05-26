@@ -1,0 +1,20 @@
+# environment
+.env
+venv/
+
+# python cache
+__pycache__/
+*.pyc
+
+# temp files
+temp/
+temp_resumes/
+test_resumes/
+
+# ML / FAISS / models
+faiss_index_data/
+*.faiss
+
+# system files
+*.dll
+*.lib

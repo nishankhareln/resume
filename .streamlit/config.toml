@@ -1,0 +1,21 @@
+# Streamlit configuration for this project.
+#
+# fileWatcherType = "none"
+#   We use sentence-transformers, which pulls in the `transformers` package.
+#   `transformers` has many vision modules (ViT, ViTMatte, YOLOS, ZoeDepth)
+#   whose top-level import requires `torchvision`. We don't install
+#   torchvision because we only do text embeddings — so Streamlit's hot-
+#   reload watcher fills the terminal with `ModuleNotFoundError: torchvision`
+#   tracebacks every time it tries to scan those modules. Disabling the
+#   watcher is the Streamlit-team-recommended workaround.
+#
+#   Trade-off: code changes won't auto-reload in the browser. Ctrl+C and
+#   re-run `streamlit run streamlit_app.py` to see edits.
+#
+# Other supported values: "auto" (default), "poll", "watchdog".
+
+[server]
+fileWatcherType = "none"
+
+[browser]
+gatherUsageStats = false
