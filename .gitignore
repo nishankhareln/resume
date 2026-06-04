@@ -11,6 +11,10 @@ temp/
 temp_resumes/
 test_resumes/
 
+# HR recruiter mode: resume pool (PII) + local index cache
+hr_resumes/
+.hr_index_cache.json
+
 # ML / FAISS / models
 faiss_index_data/
 *.faiss

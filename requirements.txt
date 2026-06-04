@@ -18,3 +18,8 @@ requests
 pdfplumber
 pdf2image
 python-docx
+
+# Backend API for the React chatbot frontend (chat_api.py)
+fastapi
+uvicorn[standard]
+python-multipart

@@ -41,6 +41,7 @@ try:
     from resume_feedback_service import generate_resume_feedback, _ats_heuristic
     from scoring_service import compute_overall_score
     from scan_ui import render_scan_steps
+    from chat_service import stream_reply, build_background, ASSISTANT_NAME
 except Exception as e:
     logger.exception("Failed to import core modules.")
     st.error(f"Failed to load core components: {e}")
@@ -48,8 +49,6 @@ except Exception as e:
 
 # --- Page config ------------------------------------------------------------
 st.set_page_config(layout="wide", page_title="AI Resume + Skill Gap Analyzer")
-st.title("AI Resume + Skill Gap Analyzer")
-st.caption("Upload a resume. Get a career-readiness report: gap analysis, LinkedIn tips, interview prep, roadmap.")
 
 if not os.path.exists("temp"):
     os.makedirs("temp")
@@ -81,6 +80,27 @@ if llm is None or emb is None:
     st.stop()
 
 
+# --- Mode: candidate-facing dashboard vs HR / recruiter tool ----------------
+with st.sidebar:
+    app_mode = st.radio(
+        "Mode",
+        options=["Candidate", "HR / Recruiter"],
+        help="Candidate = career-readiness report for one job seeker. "
+             "HR = search/screen a folder of resumes and chat with any candidate.",
+    )
+    st.divider()
+
+if app_mode == "HR / Recruiter":
+    from hr_ui import render_hr_mode
+    render_hr_mode(llm, emb)
+    st.stop()
+
+
+# --- Candidate mode ---------------------------------------------------------
+st.title("AI Resume + Skill Gap Analyzer")
+st.caption("Upload a resume. Get a career-readiness report: gap analysis, LinkedIn tips, interview prep, roadmap.")
+
+
 # --- Session state ----------------------------------------------------------
 def _ss(key: str, default: Any = None) -> Any:
     if key not in st.session_state:
@@ -99,6 +119,7 @@ _ss("feedback")
 _ss("matched_jobs", [])
 _ss("top_semantic", 0.0)
 _ss("overall_score")
+_ss("chat_messages", [])
 
 
 def _quota_hint(err_msg: str) -> Optional[str]:
@@ -265,7 +286,8 @@ if not info:
 
 target_role: str = st.session_state.get("target_role", "Software Engineer")
 
-tabs = st.tabs([
+chat_tab, overview_tab, skillgap_tab, jobs_tab, linkedin_tab, interview_tab, roadmap_tab, audit_tab = st.tabs([
+    f"💬 Chat with {ASSISTANT_NAME}",
     "Overview",
     "Skill Gap",
     "Job Matches",
@@ -276,8 +298,61 @@ tabs = st.tabs([
 ])
 
 
+# ----- Career Chat (conversational coach) -----------------------------------
+with chat_tab:
+    st.subheader(f"Chat with {ASSISTANT_NAME}, your career coach")
+    st.caption("Ask me anything about your resume, skills, job search, or interviews — just type below, like a normal chat.")
+
+    chat_msgs = st.session_state["chat_messages"]
+    # Background updates automatically as you generate more (skill gap, etc.).
+    background = build_background(info, st.session_state.get("skill_gap"), target_role)
+    first_name = (info.name.split()[0] if info.name and info.name != "Unknown" else "there")
+
+    # Friendly opener + one-tap starters, only while the chat is empty.
+    if not chat_msgs:
+        with st.chat_message("assistant"):
+            st.markdown(
+                f"Hi {first_name}! 👋 I've read your resume and I'm here to help with your "
+                f"job search, skills, interviews — whatever's on your mind. What would you like to talk about?"
+            )
+        starters = [
+            "How does my resume look for my target role?",
+            "What skills should I focus on learning next?",
+            "Can you help me prep for an interview?",
+            "How do I make my resume stand out more?",
+        ]
+        scols = st.columns(2)
+        for i, s in enumerate(starters):
+            if scols[i % 2].button(s, key=f"chat_start_{i}", use_container_width=True):
+                st.session_state["chat_pending"] = s
+                st.rerun()
+    else:
+        if st.button("🗑️ Clear chat", key="chat_clear"):
+            st.session_state["chat_messages"] = []
+            st.rerun()
+
+    # Replay the conversation so far.
+    for m in chat_msgs:
+        with st.chat_message("user" if m["role"] == "user" else "assistant"):
+            st.markdown(m["content"])
+
+    # A typed message or a tapped starter both flow through here.
+    pending = st.session_state.pop("chat_pending", None)
+    user_msg = st.chat_input(f"Message {ASSISTANT_NAME}…") or pending
+
+    if user_msg:
+        chat_msgs.append({"role": "user", "content": user_msg})
+        with st.chat_message("user"):
+            st.markdown(user_msg)
+        with st.chat_message("assistant"):
+            # Streamed so it feels like a real person typing back.
+            reply_text = st.write_stream(stream_reply(chat_msgs, llm, background))
+        chat_msgs.append({"role": "assistant", "content": reply_text})
+        st.rerun()
+
+
 # ----- Overview --------------------------------------------------------------
-with tabs[0]:
+with overview_tab:
     st.subheader("Candidate profile")
     c1, c2 = st.columns(2)
     with c1:
@@ -317,7 +392,7 @@ with tabs[0]:
 
 
 # ----- Skill Gap -------------------------------------------------------------
-with tabs[1]:
+with skillgap_tab:
     sg = st.session_state.get("skill_gap")
     if sg:
         st.subheader(f"Skill gap for: {sg.target_role}")
@@ -364,7 +439,7 @@ with tabs[1]:
 
 
 # ----- Job Matches -----------------------------------------------------------
-with tabs[2]:
+with jobs_tab:
     st.subheader("Job matches")
     selected_country = st.session_state.get("country", "us")
     market_label = "🇳🇵 Nepal — merojob.com" if selected_country == "np" else "🇺🇸 United States — JSearch"
@@ -444,7 +519,7 @@ with tabs[2]:
 
 
 # ----- LinkedIn Tips ---------------------------------------------------------
-with tabs[3]:
+with linkedin_tab:
     lr = st.session_state.get("linkedin")
     if not lr:
         st.info("Generate LinkedIn optimization tips for this candidate + target role. Uses 1 LLM call.")
@@ -477,7 +552,7 @@ with tabs[3]:
 
 
 # ----- Interview -------------------------------------------------------------
-with tabs[4]:
+with interview_tab:
     ip = st.session_state.get("interview")
     if not ip:
         st.info("Generate likely interview questions tailored to this resume + target role. Uses 1 LLM call.")
@@ -500,7 +575,7 @@ with tabs[4]:
 
 
 # ----- Roadmap --------------------------------------------------------------
-with tabs[5]:
+with roadmap_tab:
     rm = st.session_state.get("roadmap")
     if not rm:
         st.info("Generate a 30/60/90-day learning roadmap from the missing skills. Uses 1 LLM call.")
@@ -533,7 +608,7 @@ with tabs[5]:
 
 
 # ----- Resume Audit ----------------------------------------------------------
-with tabs[6]:
+with audit_tab:
     fb = st.session_state.get("feedback")
     if not fb:
         st.info("Compute the ATS score (deterministic) plus LLM-written structure/keyword feedback. Uses 1 LLM call.")

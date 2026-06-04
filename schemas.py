@@ -80,6 +80,43 @@ class ResumeFeedbackReport(BaseModel):
     top_recommendations: List[str] = Field(default_factory=list, description="3-5 highest-impact improvements in priority order.")
 
 
+# --------------------------- HR / Recruiter ---------------------------
+
+class HRChatAnswer(BaseModel):
+    """A grounded answer to a recruiter's question about ONE resume.
+
+    The whole point of this shape is trustworthiness: the model must ground
+    every answer in the resume text, quote the supporting lines, and flag
+    `not_found` instead of guessing. HR decisions can't ride on hallucinations.
+    """
+    answer: str = Field(..., description="Direct, plain-English answer to the recruiter's question, based ONLY on the resume.")
+    confidence: Literal["explicitly_stated", "implied", "not_found"] = Field(
+        "not_found",
+        description="explicitly_stated = the resume says it outright; implied = reasonably inferable from the resume; not_found = the resume does not mention it.",
+    )
+    evidence: List[str] = Field(
+        default_factory=list,
+        description="Short verbatim quotes from the resume that support the answer. Empty if not_found.",
+    )
+    follow_up_suggestions: List[str] = Field(
+        default_factory=list,
+        description="2-3 useful next questions the recruiter might ask about this candidate.",
+    )
+
+
+class CandidateScreen(BaseModel):
+    """An AI fit assessment of ONE candidate against a role/criteria, grounded in their resume."""
+    candidate: str = Field(..., description="Candidate name (or file name if name unknown).")
+    verdict: Literal["strong_match", "possible_match", "weak_match", "not_a_match"] = Field(
+        "weak_match", description="Overall hiring-screen verdict against the given criteria."
+    )
+    fit_score: int = Field(0, ge=0, le=100, description="0-100 fit score against the criteria.")
+    matched_requirements: List[str] = Field(default_factory=list, description="Criteria the candidate clearly meets.")
+    missing_requirements: List[str] = Field(default_factory=list, description="Criteria not evidenced in the resume.")
+    evidence: List[str] = Field(default_factory=list, description="Short verbatim quotes backing the matched requirements.")
+    rationale: str = Field("", description="2-3 sentence explanation of the verdict, grounded in the resume only.")
+
+
 # --------------------------- Overall score ---------------------------
 
 class OverallScore(BaseModel):
