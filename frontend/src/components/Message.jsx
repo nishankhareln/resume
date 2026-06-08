@@ -10,15 +10,15 @@ function UserAvatar() {
   );
 }
 
-function MayaAvatar() {
+function AssistantAvatar() {
   return (
-    <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 text-sm font-bold text-white shadow">
-      M
+    <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 text-xs font-bold text-white shadow">
+      NK
     </div>
   );
 }
 
-// Shown before the first token arrives, so it feels like Maya is "typing".
+// Shown before the first token arrives, so it feels like NK is "typing".
 function TypingDots() {
   return (
     <div className="flex items-center gap-1 py-1">
@@ -51,7 +51,7 @@ export default function Message({ role, content }) {
   const isUser = role === "user";
   return (
     <div className={`flex items-start gap-3 ${isUser ? "flex-row-reverse" : ""}`}>
-      {isUser ? <UserAvatar /> : <MayaAvatar />}
+      {isUser ? <UserAvatar /> : <AssistantAvatar />}
       <div
         className={`max-w-[82%] rounded-2xl px-4 py-2.5 shadow-sm ${
           isUser

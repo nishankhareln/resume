@@ -1,0 +1,49 @@
+%% Architecture of the AI Resume & Career Platform
+%% Render at https://mermaid.live or any Mermaid-aware viewer (VS Code, GitHub).
+flowchart TB
+    subgraph CLIENT["1 · CLIENT — browser"]
+        direction LR
+        JOBS["Jobs Board<br/>search · JobCard · match %"]
+        CHAT["NK Chat Sidebar<br/>ChatPanel · Message · streaming"]
+        APIJS["api.js<br/>fetch + stream reader"]
+        STREAMLIT["Streamlit App<br/>legacy dashboard + HR mode"]
+    end
+
+    subgraph API["2 · API — FastAPI / Uvicorn (chat_api.py :8000)"]
+        direction LR
+        HEALTH["GET /api/health"]
+        RESUME["POST /api/resume"]
+        JOBSAPI["GET /api/jobs"]
+        CHATAPI["POST /api/chat (stream)"]
+        SESS["In-memory session store<br/>+ job-embedding cache"]
+    end
+
+    subgraph CORE["3 · PYTHON CORE — shared"]
+        direction LR
+        APP["app.py<br/>PDF/OCR + Gemini parse"]
+        CS["chat_service.py<br/>NK persona"]
+        JM["main_job_matcher.py<br/>embeddings + cosine"]
+        MI["market_insight_service.py<br/>offline jobs"]
+        REPORTS["Report services<br/>skill gap · interview · roadmap · LinkedIn · audit · scoring"]
+        EMB["local_embeddings.py<br/>MiniLM"]
+    end
+
+    subgraph MODELS["4 · MODELS & DATA"]
+        direction LR
+        GEM["Google Gemini<br/>LLM"]
+        ST["sentence-transformers MiniLM<br/>local, free"]
+        TES["Tesseract OCR<br/>local"]
+        DATA["job_metadata.json (30) ·<br/>Resume PDF · JSearch/merojob · FAISS"]
+    end
+
+    CLIENT -->|"HTTP /api/* · fetch + streamed text"| API
+    API -->|"Python function calls"| CORE
+    CORE -->|"LLM calls · local inference · file reads"| MODELS
+    STREAMLIT -.->|"direct (no API)"| CORE
+
+    RESUME --> APP --> GEM
+    APP --> TES
+    RESUME --> EMB --> ST
+    CHATAPI --> CS --> GEM
+    JOBSAPI --> JM --> EMB
+    JOBSAPI --> MI --> DATA

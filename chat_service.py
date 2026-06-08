@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 # The assistant's persona. Named so it feels like talking to a person, not a
 # tool. The rules keep it short, warm, and human — the opposite of the rigid,
 # badge-and-evidence HR chat.
-ASSISTANT_NAME = "Maya"
+ASSISTANT_NAME = "NK"
 
 _SYSTEM_PROMPT = """You are {name}, a warm and encouraging AI career coach built into a resume app.
 You're chatting with a job seeker. Talk like a real, helpful person — not a robot or a form.
@@ -112,6 +112,35 @@ def build_background(info=None, skill_gap=None, target_role: Optional[str] = Non
 
     lines.append(
         "\nUse this naturally — don't read it back like a report. Bring up specifics only when relevant."
+    )
+    return "\n".join(lines)
+
+
+def format_job_context(job: Optional[dict]) -> str:
+    """Build a short block describing the job the user is currently viewing, so
+    NK can act as a copilot ("am I a fit for THIS one?", "tailor my resume to
+    this posting"). Returns "" when no job is in focus."""
+    if not job:
+        return ""
+    lines = ["The user is currently looking at this specific job posting:"]
+    title = job.get("title")
+    company = job.get("company")
+    location = job.get("location")
+    if title and title != "N/A":
+        lines.append(f"- Title: {title}")
+    if company and company != "N/A":
+        lines.append(f"- Company: {company}")
+    if location and location != "N/A":
+        lines.append(f"- Location: {location}")
+    score = job.get("match_score")
+    if isinstance(score, (int, float)):
+        lines.append(f"- Their resume's semantic match to this job: about {round(score * 100)}%")
+    desc = (job.get("description") or "").strip()
+    if desc:
+        lines.append(f"- Job description (may be truncated):\n\"\"\"\n{desc[:2500]}\n\"\"\"")
+    lines.append(
+        "\nWhen they ask about fit, tailoring, or applying, compare THIS posting against their "
+        "resume above and be specific about what matches and what's missing. Don't invent requirements."
     )
     return "\n".join(lines)
 

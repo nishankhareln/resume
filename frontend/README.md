@@ -1,4 +1,4 @@
-# Maya — React + Tailwind chat UI
+# NK — React + Tailwind chat UI
 
 A polished chat frontend for the AI career coach. It talks to the FastAPI
 backend (`../chat_api.py`), which reuses all the existing Python brains
@@ -41,7 +41,7 @@ Open the URL Vite prints (usually http://localhost:5173).
 ## What you get
 
 - A real chat UI with message bubbles and a live "typing" stream.
-- Attach a resume PDF (top-right) to make Maya's advice personal.
+- Attach a resume PDF (top-right) to make NK's advice personal.
 - Starter prompts, markdown answers, auto-scroll, responsive layout.
 
 ## Production build (optional)
